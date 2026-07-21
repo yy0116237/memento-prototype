@@ -90,9 +90,15 @@
 - **环境变量调整**：Vercel 侧把原计划的 `GEMINI_API_KEY` 换成 **`GROQ_API_KEY`**（Tavily 仍用 `TAVILY_API_KEY`）。Groq Key 在 https://console.groq.com/keys 免费领取。
 - 触点1 联网搜索仍走 Tavily → 结果交给 Groq 抽取结构化字段；触点2 润色+情绪、触点3 金句+标签均由 Groq 完成。
 
+## 2026-07-21 · 迭代七：接真 AI 切换（USE_MOCK=false + 指向 Vercel）
+- **原型 `memento_visual_prototype.html`**：`USE_MOCK` 由 `true` 改 `false`，`AI_ENDPOINT` 指向已部署地址 `https://memento-prototype-l8z91ez10-yuni9.vercel.app`。三触点自此走真 Tavily + Groq，UI 代码无需改动。
+- **前置（用户侧完成）**：Vercel 项目 Settings 已配置 `TAVILY_API_KEY`（已发我）与 `GROQ_API_KEY`（Groq 免费 Key，Expiration 选 Never），并 Redeploy 让变量生效。
+- **端点**：触点1 `GET /search?q=`；触点2 `POST /polish`；触点3 `POST /poster`，均位于上述 Vercel 地址下。
+
 ---
 
 ### 待办 / 待确认
 - [x] PRD 同步：`Memento PRD2.0.docx` 已追加附录 A（原型说明）与附录 B（AI 接入设计 + 迭代五补充 B.2 云函数部署）。
 - [x] GitHub 推送：8/8 文件已用 fine-grained Token 经 Contents API 推至 `yy0116237/memento-prototype` 私有仓库（含原型/PRD/CHANGELOG/`api/`/`package.json`）。
-- [ ] **接真 AI**：Vercel 已部署 → 在 Settings 配置 `TAVILY_API_KEY`（已设）+ `GROQ_API_KEY`（待设）→ Redeploy → 把公网地址发我，我改 `AI_ENDPOINT` 并关 `USE_MOCK`。
+- [x] **接真 AI**：Vercel 已部署并配置 `TAVILY_API_KEY` + `GROQ_API_KEY`；原型 `AI_ENDPOINT` 已指向公网地址、`USE_MOCK` 已改 `false`。
+- [ ] 真机验证三触点返回质量（建议用户在本地预览原型试一遍搜索/润色/海报，遇错把浏览器控制台信息发我）。
