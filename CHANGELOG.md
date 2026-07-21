@@ -84,11 +84,15 @@
   - 原型 `MementoAI` 段：`AI_ENDPOINT` 指向公网地址；`USE_MOCK` 改 `false`。
   - 三触点即走真 Tavily/Gemini，UI 代码无需改动。
 
+## 2026-07-21 · 迭代六：LLM 提供方由 Gemini 切换为 Groq（免费）
+- **背景**：Gemini API 免费层取消，改用以 **Groq 免费 LLM（Llama 3.3 70B，免信用卡）** 承担三触点的「理解/生成」部分；`api/_lib.js` 中 `callGemini` 改为 `callLLM`（Groq `chat/completions`，`response_format: json_object` 强制 JSON）。
+- **`api/search.js` / `polish.js` / `poster.js`**：调用由 `callGemini` 改为 `callLLM`（URL 编码/路由/入参不变）。
+- **环境变量调整**：Vercel 侧把原计划的 `GEMINI_API_KEY` 换成 **`GROQ_API_KEY`**（Tavily 仍用 `TAVILY_API_KEY`）。Groq Key 在 https://console.groq.com/keys 免费领取。
+- 触点1 联网搜索仍走 Tavily → 结果交给 Groq 抽取结构化字段；触点2 润色+情绪、触点3 金句+标签均由 Groq 完成。
+
 ---
 
 ### 待办 / 待确认
-- [ ] 将"原型说明"文字补入 `Memento PRD2.0.docx`（仅文档侧，页面已移除）。
-- [ ] 将上述变更同步推送至 GitHub 私有仓库（需重新生成 fine-grained Token 或手动上传，因建仓权限受限）。
-- [ ] 接真 AI 时：部署云函数（Vercel / Cloudflare）藏 Key，将 `AI_ENDPOINT` 指向公网地址并把 `USE_MOCK` 改为 `false`；申请 Tavily 与 Gemini 免费 Key。
-- [ ] 将"原型说明"文字补入 `Memento PRD2.0.docx`（仅文档侧，页面已移除）。
-- [ ] 将上述变更同步推送至 GitHub 私有仓库（需重新生成 fine-grained Token 或手动上传，因建仓权限受限）。
+- [x] PRD 同步：`Memento PRD2.0.docx` 已追加附录 A（原型说明）与附录 B（AI 接入设计 + 迭代五补充 B.2 云函数部署）。
+- [x] GitHub 推送：8/8 文件已用 fine-grained Token 经 Contents API 推至 `yy0116237/memento-prototype` 私有仓库（含原型/PRD/CHANGELOG/`api/`/`package.json`）。
+- [ ] **接真 AI**：Vercel 已部署 → 在 Settings 配置 `TAVILY_API_KEY`（已设）+ `GROQ_API_KEY`（待设）→ Redeploy → 把公网地址发我，我改 `AI_ENDPOINT` 并关 `USE_MOCK`。
