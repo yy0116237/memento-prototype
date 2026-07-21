@@ -1,0 +1,7 @@
+{
+  "name": "memento-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Memento AI cloud functions (Vercel Node runtime): Tavily search + Gemini polish/poster. Keys live only in env vars.",
+  "engines": { "node": "20.x" }
+}
