@@ -1000,11 +1000,11 @@ overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModal(); });
    接真 AI（触点1 Tavily 搜索 / 触点2 Groq(Llama 3.3) 润色+情绪 / 触点3 海报金句，三触点共用 Groq 免费 LLM）：
      已选定平台 = Vercel（Node 运行时），云函数代码在本仓库 api/（search.js / polish.js / poster.js + _lib.js）。
      1) 在 Vercel 部署本仓库，得公网地址（如 https://memento-ai.vercel.app）；
-     2) 在 Vercel 配置环境变量 TAVILY_API_KEY、GEMINI_API_KEY（Key 只在服务端）；
+     2) 在 Vercel 配置环境变量 TAVILY_API_KEY、GROQ_API_KEY（Key 只在服务端）；
      3) 把下方 AI_ENDPOINT 指向该地址、USE_MOCK 改为 false。
    纯前端不暴露任何 Key，也不触发 CORS（云函数已开跨域头）。              */
-const USE_MOCK = true;          // true=假数据跑交互（零成本零 Key）；false=调云函数真 AI
-const AI_ENDPOINT = '';         // 云函数地址，如 'https://memento-ai.vercel.app'
+const USE_MOCK = false;         // true=假数据跑交互（零成本零 Key）；false=调云函数真 AI
+const AI_ENDPOINT = 'https://memento-prototype-l8z91ez10-yuni9.vercel.app';  // 云函数公网地址
 
 /* Mock 演出库：搜索关键词命中即返回预设信息（实验期零成本验证交互） */
 const MOCK_DB = {
