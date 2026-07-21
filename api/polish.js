@@ -1,5 +1,5 @@
 // 触点2：Murmur 润色 + 情绪识别  POST /polish  body: {text, lang}
-const { send, readBody, callGemini } = require('./_lib');
+const { send, readBody, callLLM } = require('./_lib');
 
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return send(res, 204, {});
@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
 保持原意与真诚，不要过度修饰或虚构。同时判断其情绪，从 touched/funny/excited/calm/default 中选一。
 只返回 JSON：{"polished": 润色后文字, "emotion": 情绪key}。不要输出 JSON 之外内容。`;
   try {
-    const data = await callGemini(sys, '语言偏好：' + lang + '\n原文：\n' + text);
+    const data = await callLLM(sys, '语言偏好：' + lang + '\n原文：\n' + text);
     send(res, 200, { polished: data.polished || text, emotion: data.emotion || 'default' });
   } catch (e) {
     send(res, 502, { error: String(e.message || e) });
