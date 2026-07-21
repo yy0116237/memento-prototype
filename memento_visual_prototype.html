@@ -63,10 +63,41 @@
   .chip .dot{width:8px;height:8px;border-radius:50%;background:var(--chip,#1A1A1A);}
   .meta{font-family:var(--font-body);font-size:13px;opacity:.65;display:flex;align-items:center;gap:6px;}
 
+  /* 空态（新用户，尚无任何记录） */
+  .card-empty{position:relative;z-index:1;text-align:center;padding:14px 6px 6px;}
+  .empty-title{font-family:var(--font-display);font-size:22px;margin:6px 0 8px;}
+  .empty-sub{font-family:var(--font-body);font-size:14px;opacity:.65;margin:0 0 16px;line-height:1.6;}
+  .empty-cta{font-family:var(--font-display);font-size:15px;padding:9px 20px;background:#fff;border:1.5px solid var(--line);border-radius:14px;color:var(--ink);cursor:pointer;}
+  .empty-cta:active{transform:translateY(1px);}
+  .empty-hint{font-family:var(--font-body);font-size:13px;opacity:.5;margin:6px 0 0;line-height:1.6;}
+  .legend-item.dim{opacity:.38;}
+
   /* 按钮行 */
   .btn-row{display:flex;gap:12px;margin-bottom:30px;}
   .btn{position:relative;flex:1;padding:12px 0;background:var(--bg);border:none;cursor:pointer;font-family:var(--font-display);font-size:18px;color:var(--ink);}
   .btn:active{transform:translateY(1px);}
+  .btn.busy,.search-go.busy,.ai-polish.busy{opacity:.5;cursor:default;}
+
+  /* 演出搜索行（触点1：AI 联网搜索并填充，PRD 5.1） */
+  .search-row{display:flex;gap:8px;margin:-14px 0 22px;}
+  .search-input{flex:1;font-family:var(--font-body);font-size:15px;color:var(--ink);
+          border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;}
+  .search-input:focus{outline:none;border-color:var(--ink);}
+  .search-go{font-family:var(--font-display);font-size:15px;padding:0 18px;background:#fff;
+          border:1.5px solid var(--line);border-radius:12px;color:var(--ink);cursor:pointer;white-space:nowrap;}
+  .search-go:active{transform:translateY(1px);}
+
+  /* Murmur 润色按钮（触点2：AI 润色 + 情绪识别） */
+  .murmur-actions{margin-top:10px;display:flex;justify-content:flex-end;}
+  .ai-polish{font-family:var(--font-display);font-size:14px;padding:8px 16px;background:#fff;
+          border:1.5px solid var(--line);border-radius:12px;color:var(--ink);cursor:pointer;}
+  .ai-polish:active{transform:translateY(1px);}
+
+  /* 轻量 Toast 提示 */
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+          background:var(--ink);color:#fff;font-family:var(--font-body);font-size:14px;
+          padding:10px 18px;border-radius:14px;opacity:0;transition:.25s;z-index:200;pointer-events:none;max-width:80vw;text-align:center;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
   /* 双模式输入：半圆时钟指针 Toggle */
   .mode-switch{display:flex;flex-direction:column;align-items:center;margin:2px 0 22px;}
@@ -140,8 +171,6 @@
   .modal-btns{display:flex;gap:10px;margin-top:16px;}
   .m-btn{flex:1;padding:10px 0;background:#fff;border:1.5px solid var(--line);border-radius:12px;font-family:var(--font-display);font-size:16px;color:var(--ink);cursor:pointer;}
   .m-btn:disabled{opacity:.4;cursor:default;}
-
-  .tip{font-family:var(--font-body);font-size:12px;opacity:.5;margin-top:34px;line-height:1.6;}
 
   /* 弹窗顶部情绪色块（便利贴胶带），置于卡片外缘上方，不压字 */
   .modal-tab{position:absolute;top:-13px;left:26px;width:30px;height:15px;transform:rotate(5deg);border-radius:2px;opacity:.9;}
@@ -228,6 +257,13 @@
       <div class="tags" id="demoTags"></div>
       <div class="meta"><span>🎤</span><span id="demoMeta"></span></div>
     </div>
+    <div class="card-empty" id="cardEmpty" style="display:none;"></div>
+  </div>
+
+  <!-- 演出搜索（触点1：输入关键词 → AI 联网检索并自动填充表单，PRD 5.1） -->
+  <div class="search-row">
+    <input id="searchInput" class="search-input" data-i18n="searchPh" placeholder="输入演出名/关键词，如 LE SSERAFIM 2026 首尔">
+    <button class="search-go" id="searchGo"><span data-i18n="aiFill">AI 填充</span></button>
   </div>
 
   <!-- 触发按钮 -->
@@ -284,6 +320,10 @@
   <!-- Murmur 面板 -->
   <div class="input-panel" id="murmurPanel">
     <textarea class="murmur-input" id="murmurInput"></textarea>
+    <div class="murmur-actions">
+      <button class="ai-polish" id="keepBtn">Keep This</button>
+      <button class="ai-polish" id="noteBtn">Make a Note</button>
+    </div>
   </div>
 
   <!-- 情绪—色彩图例 -->
@@ -294,8 +334,6 @@
   <h2 class="section-h" data-i18n="historyTitle">历史记录</h2>
   <p class="subtitle" id="historyHint" style="margin-bottom:14px;"></p>
   <div class="timeline" id="timeline"></div>
-
-  <p class="tip" id="tip"></p>
 </div>
 
 <!-- 记录详情弹窗（便利贴 + 背景模糊） -->
@@ -331,10 +369,6 @@
       <svg class="p-emo" id="posterDot"></svg>
       <div class="poster-inner" id="posterInner"></div>
     </div>
-    <div class="note-bubble" id="noteBubble" style="display:none;">
-      <button class="m-btn" id="keepBtn" data-i18n="keepThis">原样保存</button>
-      <button class="m-btn" id="noteBtn" data-i18n="makeNote">润色一下</button>
-    </div>
     <div class="poster-actions">
       <button class="m-btn" id="posterImgBtn" data-i18n="posterSaveImg">保存为图片</button>
       <button class="m-btn" id="posterSaveBtn" data-i18n="save">保存记录</button>
@@ -368,7 +402,16 @@ const I18N = {
     snapQ4alt:'如果只能带走一个感官记忆，你会带走什么？',
     swapBtn:'换一个 ❓',
     murmurPlaceholder:'随便写点什么都行，流水账、激动乱码、散文…都可以 ✨',
-    tip:'原型说明：灰蜡笔质感边框；情绪点为彩铅；点击历史场次查看并以便利贴弹窗编辑，背景高斯模糊。喜脉喜欢体为商业字体，上线前请确认授权。'
+    emptyFeatured:'还没有记录',
+    emptyFeaturedSub:'搜索一场演出，或写下你的第一句记忆。',
+    loadSample:'加载示例数据',
+    emptyTimeline:'你去的每一场，都会出现在这里。',
+    legendHint:'记录后，这里会浮现你的情绪地图。',
+    searchPh:'输入演出名/关键词，如 LE SSERAFIM 2026 首尔',
+    aiFill:'AI 填充', aiPolish:'✨ AI 帮改一下',
+    searchEmpty:'先输入演出关键词', searchOk:'AI 已为你填充演出信息', searchFail:'未找到，已填入示例',
+    polishEmpty:'先写点什么再让 AI 帮忙', polishOk:'AI 已润色，并识别出情绪', polishFail:'润色失败，请重试',
+    archived:'已存档原话'
   },
   en:{
     search:'Search', generate:'Generate', save:'Save',
@@ -388,7 +431,16 @@ const I18N = {
     snapQ4alt:'If you could keep just one sensory memory, what would it be?',
     swapBtn:'Swap ❓',
     murmurPlaceholder:'Write anything — a diary, excited gibberish, an essay… all good ✨',
-    tip:'Prototype: gray crayon-textured borders; colored-pencil emotion dots; tap a history entry to view & edit in a sticky-note popup with blurred background. FontQu Smile is a commercial font—confirm license before launch.'
+    emptyFeatured:'No memories yet',
+    emptyFeaturedSub:'Search a show, or write your first line of memory.',
+    loadSample:'Load sample data',
+    emptyTimeline:'Every show you attend will appear here.',
+    legendHint:'After you record, your emotion map appears here.',
+    searchPh:'Type a show or keyword, e.g. LE SSERAFIM 2026 Seoul',
+    aiFill:'AI Fill', aiPolish:'✨ AI Polish',
+    searchEmpty:'Enter a keyword first', searchOk:'AI filled the show info', searchFail:'Not found — sample inserted',
+    polishEmpty:'Write something first', polishOk:'AI polished & detected mood', polishFail:'Polish failed, retry',
+    archived:'Archived'
   },
   ko:{
     search:'검색', generate:'생성', save:'저장',
@@ -408,38 +460,48 @@ const I18N = {
     snapQ4alt:'감각 기억을 딱 하나만 가져갈 수 있다면 무엇을 가져갈까요?',
     swapBtn:'다른 질문 ❓',
     murmurPlaceholder:'뭐든 편하게 적어요 — 일기, 흥분한 낙서, 수필… 다 좋아요 ✨',
-    tip:'프로토타입: 회색 크레용 질감 테두리, 색연필 감정 점, 기록 누르면 편집·배경 블러. FontQu Smile 상업 폰트—출시 전 라이선스 확인.'
+    emptyFeatured:'아직 기록이 없어요',
+    emptyFeaturedSub:'공연을 검색하거나 첫 기억을 적어보세요.',
+    loadSample:'샘플 데이터 불러오기',
+    emptyTimeline:'관람한 모든 공연이 여기에 나타나요.',
+    legendHint:'기록하면 당신의 감정 지도가 나타나요.',
+    searchPh:'공연명/키워드를 입력하세요, 예: LE SSERAFIM 2026 서울',
+    aiFill:'AI 채우기', aiPolish:'✨ AI 다듬기',
+    searchEmpty:'키워드를 먼저 입력하세요', searchOk:'AI가 공연 정보를 채웠어요', searchFail:'못 찾음 — 샘플 채움',
+    polishEmpty:'먼저 뭐라도 적어보세요', polishOk:'AI가 다듬고 감정을 찾았어요', polishFail:'다듬기 실패, 다시 시도',
+    archived:'저장됨'
   }
 };
 
 
-/* ---------- 示例数据（含三语） ---------- */
-const RECORDS = [
-  {id:1, date:'2026.06.20', emotion:'calm',
-    show:{zh:'NewJeans 首尔粉丝见面会',en:'NewJeans Seoul Fanmeeting',ko:'NewJeans 서울 팬미팅'},
-    body:{zh:'见面会最后她对着台下比了个心，说"以后也要一直在一起哦"。我笑着笑着就红了眼眶。',
-          en:'At the end she made a heart and said "let’s always stay together." I laughed until my eyes turned red.',
-          ko:'마지막에 하트를 그리며 "앞으로도 계속 함께하자" 했어요. 웃다가 눈시울이 붉어졌죠.'},
-    tags:{zh:['#治愈','#青春'],en:['#healing','#youth'],ko:['#힐링','#청춘']}},
-  {id:2, date:'2026.05.16', emotion:'touched',
-    show:{zh:'BTS 2026 首尔演唱会',en:'BTS 2026 Seoul Concert',ko:'BTS 2026 서울 콘서트'},
-    body:{zh:'那晚的安可，七万个荧光棒在黑暗里连成一片星海。他俯身说"谢谢你们等了我这么久"，我哭得妆都花了。',
-          en:'That encore — seventy thousand light sticks woven into a sea of stars. He leaned down and said "thank you for waiting so long," and I cried off my makeup.',
-          ko:'그 앵콜—칠만 개 막대기가 별바다로 엮였다. 그는 몸을 숙여 "오래 기다려줘서 고마워"라 했고, 나는 화장을 다 지웠다.'},
-    tags:{zh:['#安可','#泪目','#青春'],en:['#encore','#tears','#youth'],ko:['#앵콜','#눈물','#청춘']}},
-  {id:3, date:'2026.03.15', emotion:'excited',
-    show:{zh:'Taylor Swift 东京 Eras Tour',en:'Taylor Swift Tokyo Eras Tour',ko:'Taylor Swift 도쿄 Eras Tour'},
-    body:{zh:'东京的雨夜，她唱到 All Too Well 时全场点亮手机，像整片星河落进了体育场。',
-          en:'A rainy Tokyo night — when she sang All Too Well, the whole stadium lit up with phones like a galaxy.',
-          ko:'도쿄 빗속 밤, All Too Well 부를 땐 경기장이 폰 빛으로 은하수처럼 빛났어요.'},
-    tags:{zh:['#暴雨','#星河'],en:['#rain','#galaxy'],ko:['#비','#은하']}},
-  {id:4, date:'2026.02.01', emotion:'funny',
-    show:{zh:'Lesserafim 首尔一巡安可演唱会',en:'Lesserafim Seoul Encore',ko:'Le Sserafim 서울 앵콜'},
-    body:{zh:'安可环节成员们玩闹着互泼水，台下笑成一团，是我见过最欢乐的一场。',
-          en:'During the encore they splashed water at each other and the crowd roared with laughter — the most joyful show ever.',
-          ko:'앵콜에서 멤버들이 장난치며 물을 끼얹었고 관객은 웃음바다, 가장 유쾌했던 공연.'},
-    tags:{zh:['#欢乐','#互泼水'],en:['#fun','#splash'],ko:['#유쾌','#물싸움']}}
+/* ---------- 示例数据（含三语，仅用于「加载示例数据」按钮） ---------- */
+const SAMPLE_DATA = [
+  {id:'sample-twice', date:'2026.07.12', emotion:'touched',
+    show:{zh:'TWICE 2026 首尔安可演唱会', en:'TWICE 2026 Seoul Encore', ko:'TWICE 2026 서울 앵콜 콘서트'},
+    body:{zh:'这十一年来，谢谢九兔的陪伴，只要你们幸福就好，永远是九兔的 once， live once to love twice.',
+          en:'For eleven years, thank you ONCE for being by my side. As long as you are happy, that is enough — you will always be TWICE\'s ONCE. live once to love twice.',
+          ko:'열한 해 동안, 나인(ONCE)의 곁에 있어줘서 고마워. 너희가 행복하기만 하면 돼, 영원히 나인의 ONCE야. live once to love twice.'},
+    tags:{zh:['#十一年','#安可','#once'], en:['#11years','#encore','#once'], ko:['#11년','#앵콜','#once']}}
 ];
+
+/* ---------- 用户记录：唯一数据源，持久化到 localStorage ---------- */
+const LS_KEY = 'memento-records';
+function loadRecords(){
+  try{ const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : []; }catch(e){ return []; }
+}
+function saveRecords(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(RECORDS)); }catch(e){}
+}
+let RECORDS = loadRecords();   // 新用户默认空数组 → 空态；有记录则回填
+
+/* 新用户引导：一键加载示例（仅演示用，默认不出现） */
+function loadSample(){
+  RECORDS.length = 0;
+  SAMPLE_DATA.forEach(r=> RECORDS.push(r));
+  saveRecords();
+  renderAll();
+  drawCrayonRect(document.getElementById('cardBorder'), {animate:!reduceMotion});
+}
 const EMOTIONS = [
   {key:'excited', name:'excited'}, {key:'touched', name:'touched'},
   {key:'funny', name:'funny'}, {key:'calm', name:'calm'}, {key:'default', name:'default'}
@@ -526,7 +588,24 @@ function drawPencilUnderline(svg, color='#9A9A9A'){
 
 /* ---------- 渲染 ---------- */
 function renderFeatured(){
-  const r = RECORDS[1]; // BTS 示例
+  const T = I18N[currentLang];
+  const content = document.querySelector('#card .content');
+  const empty = document.getElementById('cardEmpty');
+  // 空态：新用户尚无任何记录 → 引导占位 + 一键加载示例
+  if(RECORDS.length === 0){
+    content.style.display = 'none';
+    empty.style.display = 'block';
+    empty.innerHTML = `<p class="empty-title">${T.emptyFeatured}</p>
+      <p class="empty-sub">${T.emptyFeaturedSub}</p>
+      <button class="empty-cta" id="loadSampleBtn">${T.loadSample}</button>`;
+    const btn = document.getElementById('loadSampleBtn');
+    if(btn) btn.addEventListener('click', loadSample);
+    return;
+  }
+  // 有记录：展示最新一条（按日期倒序取第一条）
+  empty.style.display = 'none';
+  content.style.display = 'block';
+  const r = [...RECORDS].sort((a,b)=> b.date.localeCompare(a.date))[0];
   document.getElementById('demoShow').textContent = r.show[currentLang];
   document.getElementById('demoBody').textContent = r.body[currentLang];
   document.getElementById('demoMeta').textContent = r.date;
@@ -542,8 +621,14 @@ function renderFeatured(){
 }
 
 function renderTimeline(){
+  const T = I18N[currentLang];
   const box = document.getElementById('timeline');
   box.innerHTML = '';
+  if(RECORDS.length === 0){
+    box.innerHTML = `<p class="empty-hint">${T.emptyTimeline}</p>`;
+    return;
+  }
+  // 倒序：最新在上
   [...RECORDS].sort((a,b)=> b.date.localeCompare(a.date)).forEach(r=>{
     const item = document.createElement('div');
     item.className = 'tl-item';
@@ -556,15 +641,34 @@ function renderTimeline(){
 }
 
 function renderLegend(){
+  const T = I18N[currentLang];
   const box = document.getElementById('legend');
   box.innerHTML = '';
+  const counts = {};
+  RECORDS.forEach(r=> counts[r.emotion] = (counts[r.emotion]||0)+1);
+  const used = Object.keys(counts).length > 0;
   EMOTIONS.forEach(e=>{
     const item = document.createElement('div');
-    item.className='legend-item';
-    item.innerHTML = `<svg class="dot-svg"></svg><span class="name">${e.name}</span>`;
+    item.className = 'legend-item' + (used && !counts[e.key] ? ' dim' : '');
+    const cnt = counts[e.key] ? (' ×'+counts[e.key]) : '';
+    item.innerHTML = `<svg class="dot-svg"></svg><span class="name">${e.name}${cnt}</span>`;
     box.appendChild(item);
-    drawRoughDot(item.querySelector('.dot-svg'), EMOTION_COLOR[e.key]);
+    drawRoughDot(item.querySelector('.dot-svg'), used ? EMOTION_COLOR[e.key] : '#D8D8D8');
   });
+  if(!used){
+    const hint = document.createElement('p');
+    hint.className = 'empty-hint';
+    hint.style.gridColumn = '1 / -1';
+    hint.textContent = T.legendHint;
+    box.appendChild(hint);
+  }
+}
+
+/* 统一重渲染全部由用户数据驱动的区块（空态/填充共用） */
+function renderAll(){
+  renderFeatured();
+  renderTimeline();
+  renderLegend();
 }
 
 function applyLang(lang){
@@ -572,9 +676,11 @@ function applyLang(lang){
   const T = I18N[lang];
   document.documentElement.lang = lang==='ko'?'ko':lang;
   document.getElementById('historyHint').textContent = T.historyHint;
-
-  document.getElementById('tip').textContent = T.tip;
-  document.querySelectorAll('[data-i18n]').forEach(el=>{ const k=el.getAttribute('data-i18n'); if(T[k]) el.textContent=T[k]; });
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k=el.getAttribute('data-i18n'); if(!T[k]) return;
+    if(el.tagName==='INPUT' || el.tagName==='TEXTAREA') el.placeholder = T[k];
+    else el.textContent = T[k];
+  });
   document.querySelectorAll('#langSwitch button').forEach(b=> b.classList.toggle('active', b.dataset.lang===lang));
   renderQ4();
   document.getElementById('murmurInput').placeholder = T.murmurPlaceholder;
@@ -637,9 +743,9 @@ function applyMode(mode, animate=true){
 /* ---------- 演出信息表单 + 情绪选择（PRD 5.1） ---------- */
 let selEmotion = localStorage.getItem('memento-emotion') || 'default';
 const DEMO_INFO = {
-  zh:{show:'BTS 2026 首尔演唱会', date:'2026.05.16', venue:'首尔高尺天空巨蛋', city:'首尔'},
-  en:{show:'BTS 2026 Seoul Concert', date:'2026.05.16', venue:'Goyang Stadium', city:'Seoul'},
-  ko:{show:'BTS 2026 서울 콘서트', date:'2026.05.16', venue:'고척 스카이돔', city:'서울'}
+  zh:{show:'TWICE 2026 首尔安可演唱会', date:'2026.07.12', venue:'首尔 KSPO DOME', city:'首尔'},
+  en:{show:'TWICE 2026 Seoul Encore', date:'2026.07.12', venue:'Seoul KSPO DOME', city:'Seoul'},
+  ko:{show:'TWICE 2026 서울 앵콜 콘서트', date:'2026.07.12', venue:'서울 KSPO DOME', city:'서울'}
 };
 function buildEmoPicker(){
   const box = document.getElementById('emoPick');
@@ -691,7 +797,7 @@ function extractTags(text, lang){
   return tags.slice(0,5);
 }
 
-function generatePoster(){
+async function generatePoster(){
   const lang = currentLang;
   const show  = document.getElementById('fShow').value.trim()  || DEMO_INFO[lang].show;
   const date  = document.getElementById('fDate').value.trim()   || DEMO_INFO[lang].date;
@@ -713,9 +819,19 @@ function generatePoster(){
     details = m || (I18N[lang].murmurPlaceholder || '');
     tags = extractTags([show, m].join(' '), lang);
   }
+
+  // 触点3：AI 总结金句 + 标签（Mock 模式零成本；失败则兜底用本地朴素提取）
+  const gb = document.getElementById('generateBtn');
+  gb.disabled = true; gb.classList.add('busy');
+  try{
+    const ai = await MementoAI.posterText({show, date, venue, city, emo, details}, lang);
+    if(ai.line) details = ai.line;
+    if(ai.tags && ai.tags.length) tags = ai.tags;
+  }catch(e){ /* 不阻断生成 */ }
+  gb.disabled = false; gb.classList.remove('busy');
+
   currentPoster = {show, date, venue, city, emo, mode:currentMode, details, tags, color:EMOTION_COLOR[emo]};
   renderPoster(currentPoster);
-  document.getElementById('noteBubble').style.display = currentMode==='murmur' ? 'flex' : 'none';
   openPoster();
 }
 
@@ -832,19 +948,9 @@ function savePosterEntry(){
     tags:{zh:p.tags, en:p.tags, ko:p.tags}
   };
   RECORDS.push(rec);
-  try{ localStorage.setItem('memento-records', JSON.stringify(RECORDS)); }catch(e){}
-  renderTimeline(); renderFeatured();
+  saveRecords();
+  renderTimeline(); renderFeatured(); renderLegend();
   closePoster();
-}
-
-/* Murmur：Keep This / Make a Note（PRD 5.2.3，无后端用轻量原型润色演示） */
-function makeNote(){
-  if(!currentPoster) return;
-  const emoji = {excited:'✨', touched:'💖', funny:'😆', calm:'🌿', default:'✨'}[currentPoster.emo] || '✨';
-  const raw = currentPoster.details;
-  currentPoster.details = emoji + ' ' + raw.split('\n').join('\n' + emoji + ' ') + '\n\n#' + currentPoster.show + ' #定格现场';
-  renderPoster(currentPoster);
-  document.getElementById('noteBubble').style.display = 'none';
 }
 
 /* ---------- 弹窗（便利贴 + 编辑） ---------- */
@@ -882,11 +988,166 @@ mSave.addEventListener('click', ()=>{
   r.date = mDate.value;
   r.body[currentLang] = mBody.value;
   r.tags[currentLang] = mTags.value.split(/\s+/).filter(Boolean);
-  renderTimeline(); renderFeatured();
+  saveRecords();
+  renderTimeline(); renderFeatured(); renderLegend();
   setEditable(false);
 });
 mClose.addEventListener('click', closeModal);
 overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModal(); });
+
+/* ---------- MementoAI 适配层（3 个 AI 触点统一入口） ----------
+   架构：前端只调用 MementoAI.*，内部按 USE_MOCK 决定走 Mock 还是云函数。
+   接真 AI（触点1 Tavily 搜索 / 触点2 Gemini 2.5 Flash 润色+情绪 / 触点3 海报金句）：
+     已选定平台 = Vercel（Node 运行时），云函数代码在本仓库 api/（search.js / polish.js / poster.js + _lib.js）。
+     1) 在 Vercel 部署本仓库，得公网地址（如 https://memento-ai.vercel.app）；
+     2) 在 Vercel 配置环境变量 TAVILY_API_KEY、GEMINI_API_KEY（Key 只在服务端）；
+     3) 把下方 AI_ENDPOINT 指向该地址、USE_MOCK 改为 false。
+   纯前端不暴露任何 Key，也不触发 CORS（云函数已开跨域头）。              */
+const USE_MOCK = true;          // true=假数据跑交互（零成本零 Key）；false=调云函数真 AI
+const AI_ENDPOINT = '';         // 云函数地址，如 'https://memento-ai.vercel.app'
+
+/* Mock 演出库：搜索关键词命中即返回预设信息（实验期零成本验证交互） */
+const MOCK_DB = {
+  'lesserafim':{zh:{show:'LE SSERAFIM 2026 世界巡演 首尔站', date:'2026.07.11', venue:'首尔 KSPO DOME', city:'首尔'},
+               en:{show:'LE SSERAFIM 2026 World Tour Seoul', date:'2026.07.11', venue:'Seoul KSPO DOME', city:'Seoul'},
+               ko:{show:'LE SSERAFIM 2026 월드투어 서울', date:'2026.07.11', venue:'서울 KSPO DOME', city:'서울'}},
+  'twice':{zh:{show:'TWICE 2026 首尔安可演唱会', date:'2026.07.12', venue:'首尔 KSPO DOME', city:'首尔'},
+           en:{show:'TWICE 2026 Seoul Encore', date:'2026.07.12', venue:'Seoul KSPO DOME', city:'Seoul'},
+           ko:{show:'TWICE 2026 서울 앵콜 콘서트', date:'2026.07.12', venue:'서울 KSPO DOME', city:'서울'}},
+  'bts':{zh:{show:'BTS 2026 首尔演唱会', date:'2026.05.16', venue:'首尔高尺天空巨蛋', city:'首尔'},
+         en:{show:'BTS 2026 Seoul Concert', date:'2026.05.16', venue:'Goyang Stadium', city:'Seoul'},
+         ko:{show:'BTS 2026 서울 콘서트', date:'2026.05.16', venue:'고척 스카이돔', city:'서울'}}
+};
+function mockLookup(q){
+  const k = (q||'').toLowerCase();
+  for(const key in MOCK_DB){ if(k.includes(key)) return MOCK_DB[key]; }
+  return null;
+}
+function wait(ms){ return new Promise(r=> setTimeout(r, ms)); }
+
+const MementoAI = {
+  /* 触点1：演出名称/日期/场馆/城市 搜索填充 */
+  async searchShow(query, lang){
+    if(USE_MOCK){
+      await wait(700);
+      const hit = mockLookup(query);
+      if(!hit) throw new Error('NO_RESULT');
+      return hit[lang] || hit.zh;          // {show, date, venue, city}
+    }
+    const r = await fetch(AI_ENDPOINT + '/search?q=' + encodeURIComponent(query));
+    if(!r.ok) throw new Error('NET_ERR');
+    return r.json();
+  },
+
+  /* 触点2：Murmur 润色 + 情绪识别 */
+  async polishMurmur(text, lang){
+    if(USE_MOCK){
+      await wait(700);
+      const t = (text||'').trim();
+      if(!t) throw new Error('EMPTY');
+      const emo = /哭|泪|感动|谢谢|幸福|爱|感恩/.test(t) ? 'touched'
+                : /笑|哈哈|搞笑|好笑|可爱|逗/.test(t) ? 'funny'
+                : /燃|炸|尖叫|激动|嗨|疯狂/.test(t) ? 'excited'
+                : /安静|平静|微风|慢慢|温柔/.test(t) ? 'calm' : 'default';
+      return { polished: '✨ ' + t + '\n—— 那段记忆，值得被好好记住。', emotion: emo };
+    }
+    const r = await fetch(AI_ENDPOINT + '/polish', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text, lang})
+    });
+    if(!r.ok) throw new Error('NET_ERR');
+    return r.json();                        // {polished, emotion}
+  },
+
+  /* 触点3：海报金句 + 标签（文字版式，不出图） */
+  async posterText(record, lang){
+    if(USE_MOCK){
+      await wait(700);
+      const show = record.show || '';
+      const base = lang==='en' ? 'A night worth keeping.'
+                : lang==='ko' ? '간직할 밤.' : '这一夜，值得定格。';
+      const tag = '#' + show.replace(/[^A-Za-z0-9가-힣一-龥]/g,'').slice(0,6);
+      return { line: base, tags: [tag, '#定格', '#现场'].slice(0,3) };
+    }
+    const r = await fetch(AI_ENDPOINT + '/poster', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({record, lang})
+    });
+    if(!r.ok) throw new Error('NET_ERR');
+    return r.json();                        // {line, tags:[...]}
+  }
+};
+
+/* 轻量 Toast 提示 */
+function toast(msg){
+  let t = document.getElementById('toast');
+  if(!t){ t = document.createElement('div'); t.id='toast'; t.className='toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._tm); t._tm = setTimeout(()=> t.classList.remove('show'), 1800);
+}
+
+/* 触点1：搜索 → 填充表单 */
+async function doSearch(){
+  const q = document.getElementById('searchInput').value.trim();
+  if(!q){ toast(I18N[currentLang].searchEmpty); return; }
+  const go = document.getElementById('searchGo');
+  go.disabled = true; go.classList.add('busy');
+  try{
+    const r = await MementoAI.searchShow(q, currentLang);
+    document.getElementById('fShow').value  = r.show  || '';
+    document.getElementById('fDate').value   = r.date   || '';
+    document.getElementById('fVenue').value = r.venue  || '';
+    document.getElementById('fCity').value  = r.city   || '';
+    toast(I18N[currentLang].searchOk);
+  }catch(e){
+    prefillForm();
+    toast(I18N[currentLang].searchFail);
+  }
+  go.disabled = false; go.classList.remove('busy');
+}
+
+/* 触点2：Murmur 写完后的两个选择（按钮文案固定英文，三语模式通用） */
+/* Keep This：直接存档用户写的原话；Make a Note：调用 AI 润色修改后再存档 */
+function archiveMurmur(text){
+  const lang = currentLang;
+  const show  = document.getElementById('fShow').value.trim()  || DEMO_INFO[lang].show;
+  const date  = document.getElementById('fDate').value.trim()   || DEMO_INFO[lang].date;
+  const emo   = selEmotion;
+  const rec = {
+    id: Date.now(), date, emotion: emo,
+    show:{zh:show, en:show, ko:show},
+    body:{zh:text, en:text, ko:text},
+    tags:{zh:[], en:[], ko:[]}
+  };
+  RECORDS.push(rec); saveRecords();
+  renderTimeline(); renderFeatured(); renderLegend();
+  toast(I18N[currentLang].archived);
+}
+function onKeepThis(){
+  const text = document.getElementById('murmurInput').value.trim();
+  if(!text){ toast(I18N[currentLang].polishEmpty); return; }
+  archiveMurmur(text);
+}
+async function onMakeNote(){
+  const ta = document.getElementById('murmurInput');
+  const text = ta.value.trim();
+  if(!text){ toast(I18N[currentLang].polishEmpty); return; }
+  const btn = document.getElementById('noteBtn');
+  btn.disabled = true; btn.classList.add('busy');
+  let finalText = text;
+  try{
+    const r = await MementoAI.polishMurmur(text, currentLang);
+    if(r.polished) { ta.value = r.polished; finalText = r.polished; }
+    if(r.emotion){
+      selEmotion = r.emotion;
+      localStorage.setItem('memento-emotion', r.emotion);
+      document.querySelectorAll('#emoPick .emo-opt').forEach(x=> x.classList.toggle('sel', x.dataset.key===r.emotion));
+    }
+    toast(I18N[currentLang].polishOk);
+  }catch(e){ toast(I18N[currentLang].polishFail); }
+  btn.disabled = false; btn.classList.remove('busy');
+  archiveMurmur(finalText);   // AI 润色修改后存档
+}
 
 /* ---------- 初始化 ---------- */
 /* 统一重绘所有静态手绘边框（卡片/按钮/标题下划线），animate 仅首帧用 */
@@ -958,7 +1219,11 @@ function init(){
   /* 演出信息表单 + 情绪选择（PRD 5.1） */
   buildEmoPicker();
   prefillForm();
-  document.getElementById('searchBtn').addEventListener('click', ()=> prefillForm());
+  document.getElementById('searchBtn').addEventListener('click', doSearch);
+  document.getElementById('searchGo').addEventListener('click', doSearch);
+  document.getElementById('searchInput').addEventListener('keydown', e=>{ if(e.key==='Enter') doSearch(); });
+  document.getElementById('keepBtn').addEventListener('click', onKeepThis);
+  document.getElementById('noteBtn').addEventListener('click', onMakeNote);
 
   /* 海报生成与展示（PRD 5.3） */
   document.getElementById('generateBtn').addEventListener('click', generatePoster);
@@ -966,8 +1231,6 @@ function init(){
   document.getElementById('posterImgBtn').addEventListener('click', savePosterImage);
   document.getElementById('posterSaveBtn').addEventListener('click', savePosterEntry);
   document.getElementById('posterCloseBtn').addEventListener('click', closePoster);
-  document.getElementById('keepBtn').addEventListener('click', ()=> document.getElementById('noteBubble').style.display='none');
-  document.getElementById('noteBtn').addEventListener('click', makeNote);
 
   /* 关键3：窗口/设备尺寸变化（含旋转）时，宽度改变会让 ResizeObserver 未覆盖的
      按钮行与下划线也需重绘 */
