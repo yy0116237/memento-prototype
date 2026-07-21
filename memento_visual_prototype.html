@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memento 定格 · 视觉原型预览</title>
+
+<!-- 英文 Patrick Hand(正文) + Caveat(短文本) + 韩文 Gaegu -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat&family=Gaegu:wght@400&family=Patrick+Hand&display=swap" rel="stylesheet">
+<!-- 中文正文：霞鹜文楷（屏幕优化子集版） -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-web/style.css">
+<!-- 中文短文本/海报：喜脉喜欢体（商业字体，上线前确认授权） -->
+<link rel="stylesheet" href="https://ik.imagekit.io/fonts120/packages/zzqxmxht/dist/%E5%AD%97%E5%88%B6%E5%8C%BA%E5%96%9C%E8%84%89%E5%96%9C%E6%AC%A2%E4%BD%93/result.css">
+
+<!-- 手绘边框库 -->
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"></script>
+<!-- 海报导出（html2canvas，scale:2 高清 PNG） -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<style>
+  :root{
+    --ink:#1A1A1A;
+    --bg:#FFFFFF;
+    --line:#9A9A9A;                 /* 灰蜡笔线（边框） */
+  --line-strong:#6E6E6E;          /* 比边框更深的灰：海报第二层文字用，便于区分 */
+    --c-excited:#E0A98F;
+    --c-touched:#D9B8C4;
+    --c-funny:#E6D58A;
+    --c-calm:#8FAFD0;
+    --c-default:#B0A0C8;
+    --font-body:"LXGW WenKai","Patrick Hand","Gaegu",cursive;
+    --font-display:"FontQu Smile 常规","Caveat","Gaegu",cursive;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);}
+  body{font-family:var(--font-body);display:flex;justify-content:center;padding:24px 16px 80px;-webkit-font-smoothing:antialiased;}
+  .phone{width:100%;max-width:480px;position:relative;}
+
+  /* 顶栏：标题 + 语言切换 */
+  .title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:22px;}
+  .title-wrap{position:relative;display:inline-block;}
+  .app-title{font-family:var(--font-display);font-size:36px;line-height:1.1;margin:0;}
+  .title-underline{position:absolute;left:0;bottom:-10px;width:100%;height:14px;overflow:visible;}
+  .subtitle{font-family:var(--font-body);font-size:14px;opacity:.7;margin:8px 0 0;max-width:300px;}
+  .lang-switch{display:flex;align-items:center;gap:6px;font-family:var(--font-display);font-size:16px;white-space:nowrap;padding-top:6px;}
+  .lang-switch button{background:none;border:none;cursor:pointer;font-family:var(--font-display);font-size:16px;color:var(--line);padding:2px 4px;}
+  .lang-switch button.active{color:var(--ink);border-bottom:2px solid var(--line);}
+  .lang-switch .sep{color:var(--line);opacity:.6;}
+
+  /* 通用手绘边框层 */
+  .rough-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:0;}
+
+  /* 记录卡片（精选示例） */
+  .record-card{position:relative;padding:20px 20px 18px;margin-bottom:14px;background:var(--bg);}
+  .record-card .content{position:relative;z-index:1;}
+  .card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .show-name{font-family:var(--font-display);font-size:23px;margin:0;}
+  .body-text{font-size:16px;line-height:1.7;margin:0 0 14px;}
+  .tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .chip{font-family:var(--font-display);font-size:14px;border:1.5px solid var(--chip,#1A1A1A);border-radius:14px;padding:3px 11px 3px 8px;display:inline-flex;align-items:center;gap:6px;background:#fff;}
+  .chip .dot{width:8px;height:8px;border-radius:50%;background:var(--chip,#1A1A1A);}
+  .meta{font-family:var(--font-body);font-size:13px;opacity:.65;display:flex;align-items:center;gap:6px;}
+
+  /* 按钮行 */
+  .btn-row{display:flex;gap:12px;margin-bottom:30px;}
+  .btn{position:relative;flex:1;padding:12px 0;background:var(--bg);border:none;cursor:pointer;font-family:var(--font-display);font-size:18px;color:var(--ink);}
+  .btn:active{transform:translateY(1px);}
+
+  /* 双模式输入：半圆时钟指针 Toggle */
+  .mode-switch{display:flex;flex-direction:column;align-items:center;margin:2px 0 22px;}
+  .dial{position:relative;width:180px;height:98px;}
+  .dial-arc{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;}
+  .needle{position:absolute;left:50%;bottom:8px;width:3px;height:72px;background:var(--ink);
+          transform-origin:bottom center;transform:translateX(-50%) rotate(0deg);
+          transition:transform .55s cubic-bezier(.68,-0.4,.27,1.4);border-radius:2px;}
+  .needle::before{content:'';position:absolute;top:-5px;left:50%;transform:translateX(-50%);
+          width:9px;height:9px;border-radius:50%;background:var(--ink);}
+  .pivot{position:absolute;left:50%;bottom:8px;width:13px;height:13px;border-radius:50%;
+          background:#fff;border:2px solid var(--ink);transform:translate(-50%,50%);}
+  .mode-labels{display:flex;gap:16px;margin-top:10px;}
+  .mode-btn{position:relative;background:none;border:none;cursor:pointer;
+          font-family:var(--font-display);font-size:16px;color:var(--line);
+          padding:6px 12px;transition:color .3s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .mode-btn.active{color:var(--ink);}
+  .mode-btn .mdot{font-size:11px;opacity:0;transition:opacity .3s;}
+  .mode-btn.active .mdot{opacity:1;}
+
+  /* 输入面板 */
+  .input-panel{display:none;margin-bottom:30px;}
+  .input-panel.show{display:block;animation:panelIn .35s ease;}
+  @keyframes panelIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  .snap-q{margin-bottom:18px;}
+  .snap-q .q-text{font-family:var(--font-body);font-size:15px;margin:0 0 8px;line-height:1.5;}
+  .snap-input{width:100%;font-family:var(--font-body);font-size:15px;color:var(--ink);
+          border:none;border-bottom:1.5px dashed var(--line);padding:6px 2px;background:transparent;}
+  .snap-input:focus{outline:none;border-bottom-style:solid;}
+  .q-choices{display:flex;gap:12px;}
+  .choice{flex:1;font-family:var(--font-display);font-size:15px;padding:10px 0;background:#fff;
+          border:1.5px solid var(--line);border-radius:12px;color:var(--ink);cursor:pointer;transition:border-color .2s;}
+  .choice.sel{border-color:var(--ink);border-width:2px;}
+  .q4-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .swap-btn{font-family:var(--font-display);font-size:13px;color:var(--line);
+          background:none;border:none;cursor:pointer;white-space:nowrap;padding:2px 4px;}
+  .swap-btn:active{transform:scale(.95);}
+  .murmur-input{width:100%;min-height:130px;font-family:var(--font-body);font-size:15px;line-height:1.7;
+          color:var(--ink);border:none;padding:4px 2px;background:transparent;resize:vertical;}
+  .murmur-input:focus{outline:none;}
+
+  /* 情绪—色彩图例 */
+  .section-h{font-family:var(--font-display);font-size:22px;margin:0 0 14px;}
+  .legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:14px;margin-bottom:34px;}
+  .legend-item{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;}
+  .legend-item .name{font-family:var(--font-display);font-size:14px;}
+  .dot-svg{width:40px;height:40px;}
+
+  /* 历史时间线 */
+  .timeline{position:relative;margin:6px 0 0;padding-left:30px;}
+  .timeline::before{content:'';position:absolute;left:10px;top:6px;bottom:6px;width:2px;background:var(--line);opacity:.45;}
+  .tl-item{position:relative;margin-bottom:20px;cursor:pointer;}
+  .tl-item:hover .tl-show{opacity:.7;}
+  .tl-dot{position:absolute;left:-30px;top:3px;width:20px;height:20px;}
+  .tl-card{position:relative;padding:12px 14px;background:#fff;}
+  .tl-date{font-family:var(--font-body);font-size:12px;opacity:.6;}
+  .tl-show{font-family:var(--font-display);font-size:17px;margin-top:2px;line-height:1.3;}
+
+  /* 弹窗：便利贴 + 背景模糊 */
+  .overlay{position:fixed;inset:0;display:none;z-index:50;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);background:rgba(255,255,255,.4);}
+  .overlay.show{display:block;}
+  .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-1.5deg);width:min(92%,420px);background:#fff;padding:22px 22px 18px;z-index:60;box-shadow:0 14px 44px rgba(0,0,0,.16);}
+  .modal .content{position:relative;z-index:1;}
+  .modal-emotion{font-family:var(--font-display);font-size:15px;margin:4px 0 12px;display:flex;align-items:center;gap:8px;}
+
+  .modal-emotion .e-dot{width:12px;height:12px;border-radius:50%;}
+  .m-label{display:block;font-family:var(--font-body);font-size:13px;opacity:.6;margin:10px 0 4px;}
+  .m-input{width:100%;font-family:var(--font-body);font-size:15px;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;resize:vertical;}
+  .m-area{min-height:90px;line-height:1.6;}
+  .m-input:read-only{background:#fafafa;border-style:dashed;opacity:.85;}
+  .modal-btns{display:flex;gap:10px;margin-top:16px;}
+  .m-btn{flex:1;padding:10px 0;background:#fff;border:1.5px solid var(--line);border-radius:12px;font-family:var(--font-display);font-size:16px;color:var(--ink);cursor:pointer;}
+  .m-btn:disabled{opacity:.4;cursor:default;}
+
+  .tip{font-family:var(--font-body);font-size:12px;opacity:.5;margin-top:34px;line-height:1.6;}
+
+  /* 弹窗顶部情绪色块（便利贴胶带），置于卡片外缘上方，不压字 */
+  .modal-tab{position:absolute;top:-13px;left:26px;width:30px;height:15px;transform:rotate(5deg);border-radius:2px;opacity:.9;}
+
+  /* 演出信息表单（PRD 5.1 搜索兜底 / 手动填写） */
+  .info-form{position:relative;margin:0 0 28px;padding:16px 16px 14px;background:#fff;border:1.5px dashed var(--line);border-radius:14px;}
+  .info-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .info-row label{font-family:var(--font-body);font-size:13px;opacity:.6;width:50px;flex:none;}
+  .info-input{flex:1;font-family:var(--font-body);font-size:15px;color:var(--ink);
+          border:none;border-bottom:1.5px solid var(--line);padding:5px 2px;background:transparent;}
+  .info-input:focus{outline:none;border-bottom-color:var(--ink);}
+  .emotion-row{align-items:flex-start;margin-bottom:0;}
+  .emo-pick{display:flex;gap:12px;flex-wrap:wrap;padding-top:2px;}
+  .emo-opt{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
+  .emo-opt svg{width:26px;height:26px;}
+  .emo-opt span{font-family:var(--font-display);font-size:11px;opacity:.5;}
+  .emo-opt.sel span{opacity:1;font-weight:bold;}
+
+  /* 海报弹窗（PRD 5.3 生成与展示） */
+  .poster-overlay{position:fixed;inset:0;display:none;z-index:70;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);background:rgba(255,255,255,.55);overflow:auto;}
+  .poster-overlay.show{display:block;}
+  .poster-wrap{position:relative;max-width:440px;margin:44px auto;padding:0 16px 48px;}
+  .poster{position:relative;background:#fff;padding:28px 26px;box-shadow:0 16px 50px rgba(0,0,0,.18);}
+  .poster .rough-svg{position:absolute;inset:0;}
+  .poster-inner{position:relative;z-index:1;}
+  .p-layer1{font-family:var(--font-display);font-size:30px;line-height:1.18;margin:0 0 6px;outline:none;}
+  .p-date{font-family:var(--font-display);font-size:16px;opacity:.75;margin:0 0 14px;outline:none;}
+  .p-layer2{font-family:var(--font-body);font-size:14px;color:var(--line-strong);margin:0 0 16px;outline:none;}
+  .p-tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+  .p-tag{font-family:var(--font-display);font-size:13px;border:1.5px solid;padding:3px 10px;border-radius:13px;}
+  .p-layer4{font-family:var(--font-body);font-size:15px;line-height:1.75;outline:none;white-space:pre-wrap;}
+  .p-underline{display:block;width:100%;height:14px;margin-top:8px;overflow:visible;}
+  .p-emo{position:absolute;top:-11px;right:24px;width:30px;height:30px;}
+  .note-bubble{display:flex;gap:10px;margin-top:14px;}
+  .note-bubble .m-btn{font-size:14px;padding:8px 0;}
+  .poster-actions{display:flex;gap:10px;margin-top:16px;}
+  .poster-actions .m-btn{flex:1;}
+
+
+
+</style>
+</head>
+<body>
+<!-- 全局蜡笔噪点滤镜：用分形噪点打散笔触→沙沙的蜡笔质感 -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <defs>
+    <filter id="crayon" x="-15%" y="-15%" width="130%" height="130%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2" seed="6" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2"
+        xChannelSelector="R" yChannelSelector="G" result="disp"/>
+      <feColorMatrix in="noise" type="matrix"
+        values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.0 1.0" result="mask"/>
+      <feComposite in="disp" in2="mask" operator="in"/>
+    </filter>
+  </defs>
+</svg>
+
+<div class="phone">
+
+
+  <!-- 顶栏 -->
+  <div class="title-row">
+    <div class="title-wrap">
+      <h1 class="app-title">Memento 定格</h1>
+      <svg class="title-underline" id="titleUnderline"></svg>
+    </div>
+
+    <div class="lang-switch" id="langSwitch">
+      <button data-lang="zh" class="active">中</button><span class="sep">·</span>
+      <button data-lang="en">EN</button><span class="sep">·</span>
+      <button data-lang="ko">한</button>
+    </div>
+  </div>
+
+  <!-- 精选记录卡片 -->
+  <div class="record-card" id="card">
+    <svg class="rough-svg" id="cardBorder"></svg>
+    <div class="content">
+      <div class="card-head">
+        <svg class="dot-svg" id="cardDot" style="width:24px;height:24px;"></svg>
+        <h2 class="show-name" id="demoShow"></h2>
+      </div>
+      <p class="body-text" id="demoBody"></p>
+      <div class="tags" id="demoTags"></div>
+      <div class="meta"><span>🎤</span><span id="demoMeta"></span></div>
+    </div>
+  </div>
+
+  <!-- 触发按钮 -->
+  <div class="btn-row">
+    <button class="btn" id="searchBtn"><svg class="rough-svg"></svg><span style="position:relative;z-index:1;" data-i18n="search">搜索</span></button>
+    <button class="btn" id="generateBtn"><svg class="rough-svg"></svg><span style="position:relative;z-index:1;" data-i18n="generate">生成</span></button>
+    <button class="btn" id="saveBtn"><svg class="rough-svg"></svg><span style="position:relative;z-index:1;" data-i18n="save">保存</span></button>
+  </div>
+
+  <!-- 演出信息（搜索兜底 / 手动填写，PRD 5.1） -->
+  <div class="info-form">
+    <div class="info-row"><label data-i18n="fShow">演出名称</label><input id="fShow" class="info-input"></div>
+    <div class="info-row"><label data-i18n="fDate">日期</label><input id="fDate" class="info-input"></div>
+    <div class="info-row"><label data-i18n="fVenue">场馆</label><input id="fVenue" class="info-input"></div>
+    <div class="info-row"><label data-i18n="fCity">城市</label><input id="fCity" class="info-input"></div>
+    <div class="info-row emotion-row"><label data-i18n="fEmotion">情绪</label><div class="emo-pick" id="emoPick"></div></div>
+  </div>
+
+
+  <!-- 双模式输入（Snap / Murmur） -->
+  <h2 class="section-h" data-i18n="writeTitle">记录这一场</h2>
+  <div class="mode-switch">
+    <div class="dial">
+      <svg class="dial-arc" id="dialArc"></svg>
+      <div class="needle" id="needle"></div>
+      <div class="pivot"></div>
+    </div>
+    <div class="mode-labels" id="modeLabels">
+      <button class="mode-btn active" data-mode="snap"><span class="mdot">●</span><span data-i18n="modeSnap">Snap 指引</span></button>
+      <button class="mode-btn" data-mode="murmur"><span class="mdot">●</span><span data-i18n="modeMurmur">Murmur 随想</span></button>
+    </div>
+  </div>
+
+  <!-- Snap 面板 -->
+  <div class="input-panel show" id="snapPanel">
+    <div class="snap-q"><p class="q-text" data-i18n="snapQ1"></p><input class="snap-input" id="snapQ1i"></div>
+    <div class="snap-q"><p class="q-text" data-i18n="snapQ2"></p><input class="snap-input" id="snapQ2i"></div>
+    <div class="snap-q">
+      <p class="q-text" data-i18n="snapQ3"></p>
+      <div class="q-choices">
+        <button class="choice" data-i18n="snapQ3a"></button>
+        <button class="choice" data-i18n="snapQ3b"></button>
+      </div>
+    </div>
+    <div class="snap-q">
+      <div class="q4-head">
+        <p class="q-text" id="q4Text" style="margin:0"></p>
+        <button class="swap-btn" id="swapBtn"></button>
+      </div>
+      <input class="snap-input" style="margin-top:8px" id="snapQ4i">
+    </div>
+  </div>
+
+  <!-- Murmur 面板 -->
+  <div class="input-panel" id="murmurPanel">
+    <textarea class="murmur-input" id="murmurInput"></textarea>
+  </div>
+
+  <!-- 情绪—色彩图例 -->
+  <h2 class="section-h" data-i18n="emotionsTitle">情绪 · 色彩</h2>
+  <div class="legend" id="legend"></div>
+
+  <!-- 历史时间线 -->
+  <h2 class="section-h" data-i18n="historyTitle">历史记录</h2>
+  <p class="subtitle" id="historyHint" style="margin-bottom:14px;"></p>
+  <div class="timeline" id="timeline"></div>
+
+  <p class="tip" id="tip"></p>
+</div>
+
+<!-- 记录详情弹窗（便利贴 + 背景模糊） -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <svg class="rough-svg" id="modalBorder"></svg>
+    <div class="modal-tab" id="modalTab"></div>
+    <div class="content">
+      <div class="modal-emotion"><span class="e-dot" id="modalEDot"></span><span id="modalEmotion"></span></div>
+
+      <label class="m-label" data-i18n="show">演出</label>
+      <input id="mShow" class="m-input">
+      <label class="m-label" data-i18n="date">日期</label>
+      <input id="mDate" class="m-input">
+      <label class="m-label" data-i18n="record">记录</label>
+      <textarea id="mBody" class="m-input m-area"></textarea>
+      <label class="m-label" data-i18n="tags">标签</label>
+      <input id="mTags" class="m-input">
+      <div class="modal-btns">
+        <button class="m-btn" id="mEdit" data-i18n="edit">编辑</button>
+        <button class="m-btn" id="mSave" data-i18n="save" disabled>保存</button>
+        <button class="m-btn" id="mClose" data-i18n="close">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 海报生成弹窗（PRD 5.3 生成与展示） -->
+<div class="poster-overlay" id="posterOverlay">
+  <div class="poster-wrap">
+    <div class="poster" id="poster">
+      <svg class="rough-svg" id="posterBorder"></svg>
+      <svg class="p-emo" id="posterDot"></svg>
+      <div class="poster-inner" id="posterInner"></div>
+    </div>
+    <div class="note-bubble" id="noteBubble" style="display:none;">
+      <button class="m-btn" id="keepBtn" data-i18n="keepThis">原样保存</button>
+      <button class="m-btn" id="noteBtn" data-i18n="makeNote">润色一下</button>
+    </div>
+    <div class="poster-actions">
+      <button class="m-btn" id="posterImgBtn" data-i18n="posterSaveImg">保存为图片</button>
+      <button class="m-btn" id="posterSaveBtn" data-i18n="save">保存记录</button>
+      <button class="m-btn" id="posterCloseBtn" data-i18n="close">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const EMOTION_COLOR = {excited:'#E0A98F',touched:'#D9B8C4',funny:'#E6D58A',calm:'#8FAFD0',default:'#B0A0C8'};
+
+/* ---------- 多语言 ---------- */
+let currentLang = 'zh';
+const I18N = {
+  zh:{
+    search:'搜索', generate:'生成', save:'保存',
+    fShow:'演出名称', fDate:'日期', fVenue:'场馆', fCity:'城市', fEmotion:'情绪',
+    posterSaveImg:'保存为图片', keepThis:'原样保存', makeNote:'润色一下',
+    emotionsTitle:'情绪 · 色彩', historyTitle:'历史记录',
+    historyHint:'下滑浏览，按时间回顾你的每一场',
+    show:'演出', date:'日期', record:'记录', tags:'标签',
+    edit:'编辑', close:'关闭',
+    writeTitle:'记录这一场',
+    modeSnap:'Snap 指引', modeMurmur:'Murmur 随想',
+    snapQ1:'本场印象最深的舞台是哪首歌？',
+    snapQ2:'散场后你的心情如何？',
+    snapQ3:'你是独自观演，还是和朋友一起？',
+    snapQ3a:'👤 独自', snapQ3b:'👥 朋友',
+    snapQ4:'除了舞台，今天最让你意外/好笑/感动的一个瞬间是？',
+    snapQ4alt:'如果只能带走一个感官记忆，你会带走什么？',
+    swapBtn:'换一个 ❓',
+    murmurPlaceholder:'随便写点什么都行，流水账、激动乱码、散文…都可以 ✨',
+    tip:'原型说明：灰蜡笔质感边框；情绪点为彩铅；点击历史场次查看并以便利贴弹窗编辑，背景高斯模糊。喜脉喜欢体为商业字体，上线前请确认授权。'
+  },
+  en:{
+    search:'Search', generate:'Generate', save:'Save',
+    fShow:'Show', fDate:'Date', fVenue:'Venue', fCity:'City', fEmotion:'Mood',
+    posterSaveImg:'Save Image', keepThis:'Keep This', makeNote:'Make a Note',
+    emotionsTitle:'Emotion · Color', historyTitle:'History',
+    historyHint:'Scroll to revisit each of your shows in time order',
+    show:'Show', date:'Date', record:'Notes', tags:'Tags',
+    edit:'Edit', close:'Close',
+    writeTitle:'Write This Show',
+    modeSnap:'Snap · Guide', modeMurmur:'Murmur · Free',
+    snapQ1:'Which stage/song left the deepest impression tonight?',
+    snapQ2:'How did you feel after the show?',
+    snapQ3:'Did you go alone, or with friends?',
+    snapQ3a:'👤 Alone', snapQ3b:'👥 Friends',
+    snapQ4:'Aside from the stage, what surprised / amused / moved you most today?',
+    snapQ4alt:'If you could keep just one sensory memory, what would it be?',
+    swapBtn:'Swap ❓',
+    murmurPlaceholder:'Write anything — a diary, excited gibberish, an essay… all good ✨',
+    tip:'Prototype: gray crayon-textured borders; colored-pencil emotion dots; tap a history entry to view & edit in a sticky-note popup with blurred background. FontQu Smile is a commercial font—confirm license before launch.'
+  },
+  ko:{
+    search:'검색', generate:'생성', save:'저장',
+    fShow:'공연 이름', fDate:'날짜', fVenue:'공연장', fCity:'도시', fEmotion:'감정',
+    posterSaveImg:'이미지 저장', keepThis:'Keep This', makeNote:'Make a Note',
+    emotionsTitle:'Emotion · Color', historyTitle:'기록',
+    historyHint:'아래로 스크롤해 시간순으로 각 공연을 되돌아보세요',
+    show:'공연', date:'날짜', record:'기록', tags:'태그',
+    edit:'편집', close:'닫기',
+    writeTitle:'이 공연 기록하기',
+    modeSnap:'Snap · 가이드', modeMurmur:'Murmur · 자유',
+    snapQ1:'오늘 가장 인상 깊었던 무대·곡은?',
+    snapQ2:'공연이 끝난 뒤 기분은 어땠나요?',
+    snapQ3:'혼자 봤나요, 친구와 함께였나요?',
+    snapQ3a:'👤 혼자', snapQ3b:'👥 친구',
+    snapQ4:'무대 말고, 오늘 가장 뜻밖이거나 웃기거나 감동적이었던 순간은?',
+    snapQ4alt:'감각 기억을 딱 하나만 가져갈 수 있다면 무엇을 가져갈까요?',
+    swapBtn:'다른 질문 ❓',
+    murmurPlaceholder:'뭐든 편하게 적어요 — 일기, 흥분한 낙서, 수필… 다 좋아요 ✨',
+    tip:'프로토타입: 회색 크레용 질감 테두리, 색연필 감정 점, 기록 누르면 편집·배경 블러. FontQu Smile 상업 폰트—출시 전 라이선스 확인.'
+  }
+};
+
+
+/* ---------- 示例数据（含三语） ---------- */
+const RECORDS = [
+  {id:1, date:'2026.06.20', emotion:'calm',
+    show:{zh:'NewJeans 首尔粉丝见面会',en:'NewJeans Seoul Fanmeeting',ko:'NewJeans 서울 팬미팅'},
+    body:{zh:'见面会最后她对着台下比了个心，说"以后也要一直在一起哦"。我笑着笑着就红了眼眶。',
+          en:'At the end she made a heart and said "let’s always stay together." I laughed until my eyes turned red.',
+          ko:'마지막에 하트를 그리며 "앞으로도 계속 함께하자" 했어요. 웃다가 눈시울이 붉어졌죠.'},
+    tags:{zh:['#治愈','#青春'],en:['#healing','#youth'],ko:['#힐링','#청춘']}},
+  {id:2, date:'2026.05.16', emotion:'touched',
+    show:{zh:'BTS 2026 首尔演唱会',en:'BTS 2026 Seoul Concert',ko:'BTS 2026 서울 콘서트'},
+    body:{zh:'那晚的安可，七万个荧光棒在黑暗里连成一片星海。他俯身说"谢谢你们等了我这么久"，我哭得妆都花了。',
+          en:'That encore — seventy thousand light sticks woven into a sea of stars. He leaned down and said "thank you for waiting so long," and I cried off my makeup.',
+          ko:'그 앵콜—칠만 개 막대기가 별바다로 엮였다. 그는 몸을 숙여 "오래 기다려줘서 고마워"라 했고, 나는 화장을 다 지웠다.'},
+    tags:{zh:['#安可','#泪目','#青春'],en:['#encore','#tears','#youth'],ko:['#앵콜','#눈물','#청춘']}},
+  {id:3, date:'2026.03.15', emotion:'excited',
+    show:{zh:'Taylor Swift 东京 Eras Tour',en:'Taylor Swift Tokyo Eras Tour',ko:'Taylor Swift 도쿄 Eras Tour'},
+    body:{zh:'东京的雨夜，她唱到 All Too Well 时全场点亮手机，像整片星河落进了体育场。',
+          en:'A rainy Tokyo night — when she sang All Too Well, the whole stadium lit up with phones like a galaxy.',
+          ko:'도쿄 빗속 밤, All Too Well 부를 땐 경기장이 폰 빛으로 은하수처럼 빛났어요.'},
+    tags:{zh:['#暴雨','#星河'],en:['#rain','#galaxy'],ko:['#비','#은하']}},
+  {id:4, date:'2026.02.01', emotion:'funny',
+    show:{zh:'Lesserafim 首尔一巡安可演唱会',en:'Lesserafim Seoul Encore',ko:'Le Sserafim 서울 앵콜'},
+    body:{zh:'安可环节成员们玩闹着互泼水，台下笑成一团，是我见过最欢乐的一场。',
+          en:'During the encore they splashed water at each other and the crowd roared with laughter — the most joyful show ever.',
+          ko:'앵콜에서 멤버들이 장난치며 물을 끼얹었고 관객은 웃음바다, 가장 유쾌했던 공연.'},
+    tags:{zh:['#欢乐','#互泼水'],en:['#fun','#splash'],ko:['#유쾌','#물싸움']}}
+];
+const EMOTIONS = [
+  {key:'excited', name:'excited'}, {key:'touched', name:'touched'},
+  {key:'funny', name:'funny'}, {key:'calm', name:'calm'}, {key:'default', name:'default'}
+];
+
+/* ---------- 手绘：灰蜡笔边框（单遍手绘 + 噪点滤镜→沙沙蜡笔质感） ---------- */
+function drawCrayonRect(svg, {pad=10, animate=true}={}){
+  if(!svg) return;
+  const r = svg.getBoundingClientRect();
+  const w = r.width || svg.clientWidth, h = r.height || svg.clientHeight;
+  if(!w || !h) return;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.setAttribute('width', w);
+  svg.setAttribute('height', h);
+  svg.innerHTML = '';
+  const rc = rough.svg(svg);
+  const seed = (Math.random()*1e4)|0;
+  const node = rc.rectangle(pad, pad, w-pad*2, h-pad*2,
+    {roughness:1.4, bowing:1, stroke:'#9A9A9A', strokeWidth:2.2, seed});
+  svg.appendChild(node);
+  node.querySelectorAll('path').forEach((p, i)=>{
+    const hasStroke = p.getAttribute('stroke') && p.getAttribute('stroke') !== 'none';
+    if(!hasStroke) return;
+    p.style.opacity = 0.9;
+    p.setAttribute('filter','url(#crayon)');   // 噪点打散→蜡笔颗粒
+    if(reduceMotion || !animate){ p.style.strokeDashoffset = 0; return; }
+    const len = p.getTotalLength();
+    p.style.transition = 'none';
+    p.style.strokeDasharray = len;
+    p.style.strokeDashoffset = len;
+    p.getBoundingClientRect();
+    p.style.transition = `stroke-dashoffset .8s ease ${i*0.08}s`;
+    p.style.strokeDashoffset = 0;
+  });
+}
+
+
+/* ---------- 彩铅质感圆点 ---------- */
+function drawRoughDot(svg, color){
+  if(!svg) return;
+  const r = svg.getBoundingClientRect();
+  const s = r.width || svg.clientWidth || 40;
+  svg.setAttribute('viewBox', `0 0 ${s} ${s}`);
+  svg.setAttribute('width', s);
+  svg.setAttribute('height', s);
+  svg.innerHTML = '';
+  const rc = rough.svg(svg);
+  const node = rc.circle(s/2, s/2, s*0.72, {fill:color, fillStyle:'hachure', hachureGap:3, fillWeight:1.1, stroke:color, strokeWidth:1.4, roughness:2});
+  svg.appendChild(node);
+}
+
+/* ---------- perfect-freehand 铅笔下划线（静态） ---------- */
+function getSvgPathFromStroke(stroke){
+  if(!stroke.length) return '';
+  const d = stroke.reduce((acc,[x0,y0],i,arr)=>{
+    const [x1,y1]=arr[(i+1)%arr.length];
+    acc.push(x0,y0,(x0+x1)/2,(y0+y1)/2);
+    return acc;
+  },['M',...stroke[0],'Q']);
+  d.push('Z');
+  return d.join(' ');
+}
+function drawPencilUnderline(svg, color='#9A9A9A'){
+  if(!svg) return;
+  const r = svg.getBoundingClientRect();
+  const w = r.width || svg.clientWidth || 160, h = r.height || svg.clientHeight || 14;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.setAttribute('width', w);
+  svg.setAttribute('height', h);
+  svg.innerHTML='';
+  const NS='http://www.w3.org/2000/svg';
+  const mid=h/2;
+  const pts=[];
+  for(let x=2;x<=w-2;x+=6){ const y=mid + Math.sin(x/14)*1.6 + (Math.random()-0.5)*0.8; pts.push(`${x.toFixed(1)},${y.toFixed(2)}`); }
+  const d='M '+pts.join(' L ');
+  [{op:0.6,wt:1.5,jit:0},{op:0.42,wt:1.0,jit:0.8}].forEach((s,i)=>{
+    const dd = i===0 ? d : d.replace(/([\d.]+),([\d.]+)/g,(m,x,y)=>`${(+x).toFixed(1)},${(+y+(Math.random()-0.5)*s.jit).toFixed(2)}`);
+    const p=document.createElementNS(NS,'path');
+    p.setAttribute('d',dd); p.setAttribute('fill','none'); p.setAttribute('stroke',color);
+    p.setAttribute('stroke-width',s.wt); p.setAttribute('stroke-linecap','round'); p.style.opacity=s.op;
+    svg.appendChild(p);
+  });
+}
+
+/* ---------- 渲染 ---------- */
+function renderFeatured(){
+  const r = RECORDS[1]; // BTS 示例
+  document.getElementById('demoShow').textContent = r.show[currentLang];
+  document.getElementById('demoBody').textContent = r.body[currentLang];
+  document.getElementById('demoMeta').textContent = r.date;
+  const tagBox = document.getElementById('demoTags');
+  tagBox.innerHTML = '';
+  r.tags[currentLang].forEach(t=>{
+    const c = document.createElement('span');
+    c.className='chip'; c.style.setProperty('--chip', EMOTION_COLOR[r.emotion]);
+    c.innerHTML = `<span class="dot"></span>${t}`;
+    tagBox.appendChild(c);
+  });
+  drawRoughDot(document.getElementById('cardDot'), EMOTION_COLOR[r.emotion]);
+}
+
+function renderTimeline(){
+  const box = document.getElementById('timeline');
+  box.innerHTML = '';
+  [...RECORDS].sort((a,b)=> b.date.localeCompare(a.date)).forEach(r=>{
+    const item = document.createElement('div');
+    item.className = 'tl-item';
+    item.innerHTML = `<svg class="tl-dot"></svg>
+      <div class="tl-card"><div class="tl-date">${r.date}</div><div class="tl-show">${r.show[currentLang]}</div></div>`;
+    item.addEventListener('click', ()=> openModal(r.id));
+    box.appendChild(item);
+    drawRoughDot(item.querySelector('.tl-dot'), EMOTION_COLOR[r.emotion]);
+  });
+}
+
+function renderLegend(){
+  const box = document.getElementById('legend');
+  box.innerHTML = '';
+  EMOTIONS.forEach(e=>{
+    const item = document.createElement('div');
+    item.className='legend-item';
+    item.innerHTML = `<svg class="dot-svg"></svg><span class="name">${e.name}</span>`;
+    box.appendChild(item);
+    drawRoughDot(item.querySelector('.dot-svg'), EMOTION_COLOR[e.key]);
+  });
+}
+
+function applyLang(lang){
+  currentLang = lang;
+  const T = I18N[lang];
+  document.documentElement.lang = lang==='ko'?'ko':lang;
+  document.getElementById('historyHint').textContent = T.historyHint;
+
+  document.getElementById('tip').textContent = T.tip;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ const k=el.getAttribute('data-i18n'); if(T[k]) el.textContent=T[k]; });
+  document.querySelectorAll('#langSwitch button').forEach(b=> b.classList.toggle('active', b.dataset.lang===lang));
+  renderQ4();
+  document.getElementById('murmurInput').placeholder = T.murmurPlaceholder;
+  renderFeatured();
+  renderTimeline();
+  // 语言切换后文字长度/换行行数变化 → 卡片高度可能变 → 重绘边框对齐
+  requestAnimationFrame(()=> drawCrayonRect(document.getElementById('cardBorder'), {animate:false}));
+  if(document.getElementById('overlay').classList.contains('show')) openModal(currentOpenId);
+}
+
+/* ---------- 双模式输入（Snap / Murmur） ---------- */
+let currentMode = localStorage.getItem('memento-mode') || 'snap';  // 默认 Snap / 记忆上次选择
+let q4Alt = false;                                                 // Q4 是否为备选变体
+
+/* 半圆灰蜡笔表盘弧（配合手绘风） */
+function drawDialArc(){
+  const svg = document.getElementById('dialArc');
+  if(!svg) return;
+  const w = svg.clientWidth || 180, h = svg.clientHeight || 98;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.innerHTML = '';
+  const rc = rough.svg(svg);
+  const cx = w/2, cy = h-8, d = Math.min(w-14, (h-8)*2);
+  const node = rc.arc(cx, cy, d, d, Math.PI, 2*Math.PI, false,
+    {stroke:'#9A9A9A', strokeWidth:2, roughness:1.4, bowing:1});
+  svg.appendChild(node);
+  node.querySelectorAll('path').forEach(p=>{
+    if(p.getAttribute('stroke') && p.getAttribute('stroke')!=='none'){
+      p.setAttribute('filter','url(#crayon)');
+      p.style.opacity = 0.85;
+    }
+  });
+}
+
+/* Q4 文案（原题 / 备选变体） */
+function renderQ4(){
+  const T = I18N[currentLang];
+  const q4 = document.getElementById('q4Text');
+  const swap = document.getElementById('swapBtn');
+  if(q4) q4.textContent = q4Alt ? T.snapQ4alt : T.snapQ4;
+  if(swap) swap.textContent = T.swapBtn;
+}
+
+/* 应用模式：指针由中间转向对应模式 + 切换面板 + 记忆 */
+function applyMode(mode, animate=true){
+  currentMode = mode;
+  localStorage.setItem('memento-mode', mode);
+  const needle = document.getElementById('needle');
+  const deg = mode==='snap' ? -52 : 52;   // 左=Snap，右=Murmur
+  if(needle){
+    if(!animate) needle.style.transition = 'none';
+    needle.style.transform = `translateX(-50%) rotate(${deg}deg)`;
+    if(!animate){ needle.getBoundingClientRect(); needle.style.transition = ''; }
+  }
+  document.querySelectorAll('.mode-btn').forEach(b=> b.classList.toggle('active', b.dataset.mode===mode));
+  document.getElementById('snapPanel').classList.toggle('show', mode==='snap');
+  document.getElementById('murmurPanel').classList.toggle('show', mode==='murmur');
+}
+
+/* ---------- 演出信息表单 + 情绪选择（PRD 5.1） ---------- */
+let selEmotion = localStorage.getItem('memento-emotion') || 'default';
+const DEMO_INFO = {
+  zh:{show:'BTS 2026 首尔演唱会', date:'2026.05.16', venue:'首尔高尺天空巨蛋', city:'首尔'},
+  en:{show:'BTS 2026 Seoul Concert', date:'2026.05.16', venue:'Goyang Stadium', city:'Seoul'},
+  ko:{show:'BTS 2026 서울 콘서트', date:'2026.05.16', venue:'고척 스카이돔', city:'서울'}
+};
+function buildEmoPicker(){
+  const box = document.getElementById('emoPick');
+  box.innerHTML = '';
+  EMOTIONS.forEach(e=>{
+    const opt = document.createElement('div');
+    opt.className = 'emo-opt' + (e.key===selEmotion ? ' sel' : '');
+    opt.dataset.key = e.key;
+    opt.innerHTML = `<svg class="emo-dot"></svg><span>${e.name}</span>`;
+    opt.addEventListener('click', ()=>{
+      selEmotion = e.key;
+      localStorage.setItem('memento-emotion', e.key);
+      box.querySelectorAll('.emo-opt').forEach(x=> x.classList.toggle('sel', x.dataset.key===e.key));
+    });
+    box.appendChild(opt);
+    drawRoughDot(opt.querySelector('.emo-dot'), EMOTION_COLOR[e.key]);
+  });
+}
+function prefillForm(){
+  const d = DEMO_INFO[currentLang];
+  if(!document.getElementById('fShow').value) document.getElementById('fShow').value = d.show;
+  if(!document.getElementById('fDate').value)  document.getElementById('fDate').value  = d.date;
+  if(!document.getElementById('fVenue').value) document.getElementById('fVenue').value = d.venue;
+  if(!document.getElementById('fCity').value)  document.getElementById('fCity').value  = d.city;
+}
+
+/* ---------- 海报生成与展示（PRD 5.3） ---------- */
+let currentPoster = null;
+
+/* 轻量标签提取（原型无后端，做朴素关键词提取，演示第 3 层） */
+function extractTags(text, lang){
+  const stops = {
+    zh:['的','了','是','我','在','和','也','都','就','你','他','她','它','有','个','这','那','啊','吧','吗','呢','哦','呀','让','给','的','把','被','对','与'],
+    en:['the','a','an','and','or','but','to','of','in','on','i','you','we','my','me','is','was','it','this','that','for','with','at','be','are'],
+    ko:['은','는','이','가','을','를','의','에','와','과','도','로','으로','그','이것','저것']
+  };
+  const arr = text.split(/[\s,，。.!?！？、;；:：\n()（）"'’]+/).map(s=>s.trim()).filter(Boolean);
+  const set = new Set();
+  for(const w of arr){
+    if(w.length < 2) continue;
+    if((stops[lang]||[]).includes(w.toLowerCase())) continue;
+    set.add(w);
+    if(set.size >= 5) break;
+  }
+  let tags = [...set];
+  const fb = {zh:['#定格','#现场','#回忆'], en:['#moment','#live','#memory'], ko:['#순간','#라이브','#추억']};
+  let i = 0;
+  while(tags.length < 3 && i < fb[lang].length) tags.push(fb[lang][i++]);
+  return tags.slice(0,5);
+}
+
+function generatePoster(){
+  const lang = currentLang;
+  const show  = document.getElementById('fShow').value.trim()  || DEMO_INFO[lang].show;
+  const date  = document.getElementById('fDate').value.trim()   || DEMO_INFO[lang].date;
+  const venue = document.getElementById('fVenue').value.trim();
+  const city  = document.getElementById('fCity').value.trim();
+  const emo   = selEmotion;
+  let details = '', tags = [];
+  if(currentMode === 'snap'){
+    const q1 = document.getElementById('snapQ1i').value.trim();
+    const q2 = document.getElementById('snapQ2i').value.trim();
+    const q3 = document.querySelector('#snapPanel .choice.sel');
+    const q3t = q3 ? q3.textContent.trim() : '';
+    const q4 = document.getElementById('snapQ4i').value.trim();
+    details = [q1, q2, q4].filter(Boolean).join('\n');
+    if(q3t) details = (q3t + '\n') + details;
+    tags = extractTags([show, q1, q2, q4].join(' '), lang);
+  } else {
+    const m = document.getElementById('murmurInput').value.trim();
+    details = m || (I18N[lang].murmurPlaceholder || '');
+    tags = extractTags([show, m].join(' '), lang);
+  }
+  currentPoster = {show, date, venue, city, emo, mode:currentMode, details, tags, color:EMOTION_COLOR[emo]};
+  renderPoster(currentPoster);
+  document.getElementById('noteBubble').style.display = currentMode==='murmur' ? 'flex' : 'none';
+  openPoster();
+}
+
+function renderPoster(p){
+  const inner = document.getElementById('posterInner');
+  inner.innerHTML = '';
+  const h  = document.createElement('h2');    h.className='p-layer1'; h.contentEditable='true'; h.textContent = p.show;
+  const d  = document.createElement('div');    d.className='p-date';   d.contentEditable='true'; d.textContent = p.date;
+  const l2 = document.createElement('div');    l2.className='p-layer2'; l2.contentEditable='true'; l2.textContent = [p.venue, p.city].filter(Boolean).join(' · ');
+  const tg = document.createElement('div');    tg.className='p-tags';
+  p.tags.forEach(t=>{
+    const c = document.createElement('span'); c.className='p-tag'; c.contentEditable='true';
+    c.style.borderColor = p.color; c.style.color = p.color;
+    c.textContent = t.startsWith('#') ? t : ('#'+t);
+    tg.appendChild(c);
+  });
+  const l4 = document.createElement('div');    l4.className='p-layer4'; l4.contentEditable='true'; l4.textContent = p.details || '（空）';
+  const ul = document.createElement('svg');    ul.className='p-underline'; ul.id='posterUnderline';
+  inner.appendChild(h); inner.appendChild(d); inner.appendChild(l2); inner.appendChild(tg); inner.appendChild(l4); inner.appendChild(ul);
+
+  // 彩铅情绪点
+  drawRoughDot(document.getElementById('posterDot'), p.color);
+  // 边框 + 铅笔手写下划线随布局自动重绘
+  requestAnimationFrame(()=>{
+    drawCrayonRect(document.getElementById('posterBorder'), {animate:!reduceMotion});
+    drawPosterUnderline();
+  });
+
+  // contenteditable 自动同步回数据
+  const sync = ()=>{
+    p.show  = h.textContent;
+    p.date  = d.textContent;
+    p.venue = l2.textContent.split('·')[0]?.trim() || '';
+    p.city  = l2.textContent.split('·')[1]?.trim() || '';
+    p.tags  = [...tg.children].map(c=> c.textContent);
+    p.details = l4.textContent;
+  };
+  [h,d,l2,l4].forEach(el=> el.addEventListener('input', sync));
+  tg.querySelectorAll('.p-tag').forEach(el=> el.addEventListener('input', sync));
+}
+
+/* 海报打开时，按真实尺寸重绘边框 + 铅笔下划线（字体回流/编辑变高都不缺底边） */
+function redrawPosterIfOpen(){
+  const ov = document.getElementById('posterOverlay');
+  if(ov && ov.classList.contains('show')){
+    drawCrayonRect(document.getElementById('posterBorder'), {animate:false});
+    drawPosterUnderline();
+  }
+}
+
+/* 最后一层用户文本下的铅笔手写下划线（纯 SVG 波浪路径 + 双遍叠加，仿手写随意感，不依赖外部库） */
+function drawPosterUnderline(){
+  const svg = document.getElementById('posterUnderline');
+  if(!svg) return;
+  const r = svg.getBoundingClientRect();
+  const w = r.width || svg.clientWidth || 300, h = r.height || svg.clientHeight || 14;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.setAttribute('width', w);
+  svg.setAttribute('height', h);
+  svg.innerHTML = '';
+  const NS = 'http://www.w3.org/2000/svg';
+  const mid = h/2;
+  // 第一遍波浪线：sin 起伏 + 抖动，不是直尺线
+  const pts = [];
+  for(let x=3; x<=w-3; x+=6){
+    const y = mid + Math.sin(x/15)*1.6 + Math.sin(x/7)*0.5 + (Math.random()-0.5)*1.0;
+    pts.push(`${x.toFixed(1)},${y.toFixed(2)}`);
+  }
+  const d = 'M ' + pts.join(' L ');
+  // 两遍叠加、轻微错位 → 铅笔石墨颗粒/深浅不匀的随意感
+  [{op:0.6, wt:1.5, jit:0}, {op:0.42, wt:1.0, jit:0.8}].forEach((s, i)=>{
+    const dd = i===0 ? d : d.replace(/([\d.]+),([\d.]+)/g, (m,x,y)=> `${(+x).toFixed(1)},${(+y + (Math.random()-0.5)*s.jit).toFixed(2)}`);
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', dd);
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke', '#8A8A8A');
+    p.setAttribute('stroke-width', s.wt);
+    p.setAttribute('stroke-linecap', 'round');
+    p.style.opacity = s.op;
+    svg.appendChild(p);
+  });
+}
+
+function openPoster(){ document.getElementById('posterOverlay').classList.add('show'); }
+function closePoster(){ document.getElementById('posterOverlay').classList.remove('show'); }
+
+function savePosterImage(){
+  const node = document.getElementById('poster');
+  if(window.html2canvas){
+    redrawPosterIfOpen();   // 捕获前按真实尺寸重绘边框+下划线，避免底边缺失
+    html2canvas(node, {
+      scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false,
+      onclone:(clonedDoc)=>{
+        // html2canvas 对 SVG filter 支持差 → 临时移除蜡笔滤镜，确保边框完整渲染
+        const svg = clonedDoc.getElementById('posterBorder');
+        if(svg) svg.querySelectorAll('path').forEach(p=>{ p.style.filter='none'; p.removeAttribute('filter'); });
+      }
+    }).then(canvas=>{
+      const a = document.createElement('a');
+      a.download = (currentPoster?.show || 'memento') + '.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    });
+  }
+}
+
+function savePosterEntry(){
+  if(!currentPoster) return;
+  const p = currentPoster;
+  const rec = {
+    id: Date.now(), date: p.date, emotion: p.emo,
+    show:{zh:p.show, en:p.show, ko:p.show},
+    body:{zh:p.details, en:p.details, ko:p.details},
+    tags:{zh:p.tags, en:p.tags, ko:p.tags}
+  };
+  RECORDS.push(rec);
+  try{ localStorage.setItem('memento-records', JSON.stringify(RECORDS)); }catch(e){}
+  renderTimeline(); renderFeatured();
+  closePoster();
+}
+
+/* Murmur：Keep This / Make a Note（PRD 5.2.3，无后端用轻量原型润色演示） */
+function makeNote(){
+  if(!currentPoster) return;
+  const emoji = {excited:'✨', touched:'💖', funny:'😆', calm:'🌿', default:'✨'}[currentPoster.emo] || '✨';
+  const raw = currentPoster.details;
+  currentPoster.details = emoji + ' ' + raw.split('\n').join('\n' + emoji + ' ') + '\n\n#' + currentPoster.show + ' #定格现场';
+  renderPoster(currentPoster);
+  document.getElementById('noteBubble').style.display = 'none';
+}
+
+/* ---------- 弹窗（便利贴 + 编辑） ---------- */
+let currentOpenId = null;
+const overlay = document.getElementById('overlay');
+const modal = document.getElementById('modal');
+const mShow=document.getElementById('mShow'), mDate=document.getElementById('mDate'),
+      mBody=document.getElementById('mBody'), mTags=document.getElementById('mTags'),
+      mEdit=document.getElementById('mEdit'), mSave=document.getElementById('mSave'), mClose=document.getElementById('mClose');
+
+function openModal(id){
+  currentOpenId = id;
+  const r = RECORDS.find(x=>x.id===id);
+  mShow.value = r.show[currentLang];
+  mDate.value = r.date;
+  mBody.value = r.body[currentLang];
+  mTags.value = r.tags[currentLang].join(' ');
+  document.getElementById('modalEmotion').textContent = r.emotion;
+  document.getElementById('modalEDot').style.background = EMOTION_COLOR[r.emotion];
+  document.getElementById('modalTab').style.background = EMOTION_COLOR[r.emotion];
+  setEditable(false);
+  overlay.classList.add('show');
+  requestAnimationFrame(()=> drawCrayonRect(document.getElementById('modalBorder'), {animate:!reduceMotion}));
+}
+function closeModal(){ overlay.classList.remove('show'); }
+function setEditable(b){
+  [mShow,mDate,mBody,mTags].forEach(el=> el.readOnly = !b);
+  mSave.disabled = !b;
+  modal.classList.toggle('editing', b);
+}
+mEdit.addEventListener('click', ()=> setEditable(true));
+mSave.addEventListener('click', ()=>{
+  const r = RECORDS.find(x=>x.id===currentOpenId);
+  r.show[currentLang] = mShow.value;
+  r.date = mDate.value;
+  r.body[currentLang] = mBody.value;
+  r.tags[currentLang] = mTags.value.split(/\s+/).filter(Boolean);
+  renderTimeline(); renderFeatured();
+  setEditable(false);
+});
+mClose.addEventListener('click', closeModal);
+overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModal(); });
+
+/* ---------- 初始化 ---------- */
+/* 统一重绘所有静态手绘边框（卡片/按钮/标题下划线），animate 仅首帧用 */
+function redrawStaticBorders(animate=false){
+  drawCrayonRect(document.getElementById('cardBorder'), {animate});
+  document.querySelectorAll('.btn').forEach(b=> drawCrayonRect(b.querySelector('.rough-svg'), {pad:4, animate:false}));
+  drawPencilUnderline(document.getElementById('titleUnderline'));
+}
+
+function init(){
+  renderLegend();
+  applyLang('zh');
+  redrawStaticBorders(true);
+
+  /* 关键1：网络字体（中/韩/英）异步加载完成后，卡片高度与标题宽度会变化 → 重绘对齐，
+     避免"边框盖字/偏移"。ready 可能触发多次（分批加载），每次都重绘。 */
+  if(document.fonts && document.fonts.ready){
+    document.fonts.ready.then(()=>{ redrawStaticBorders(false); redrawPosterIfOpen(); });
+    // 兜底：部分环境字体替换晚于 ready，延时再校正一次
+    setTimeout(()=>{ redrawStaticBorders(false); redrawPosterIfOpen(); }, 900);
+  }
+
+  /* 海报自身尺寸变化（编辑变长/字体回流）→ 重绘边框 + 下划线，保证底边完整 */
+  if('ResizeObserver' in window && document.getElementById('poster')){
+    let rp;
+    const ro = new ResizeObserver(()=>{
+      clearTimeout(rp);
+      rp = setTimeout(redrawPosterIfOpen, 120);
+    });
+    ro.observe(document.getElementById('poster'));
+  }
+
+  /* 关键2：用 ResizeObserver 监听卡片真实尺寸变化（字体加载、语言切换、换行行数、
+     设备宽度/横竖屏差异都会改变高度）→ 自动重绘边框，一劳永逸对齐。 */
+  if('ResizeObserver' in window){
+    let rt;
+    const ro = new ResizeObserver(()=>{
+      clearTimeout(rt);
+      rt = setTimeout(()=> drawCrayonRect(document.getElementById('cardBorder'), {animate:false}), 120);
+    });
+    ro.observe(document.getElementById('card'));
+  }
+
+  document.querySelectorAll('.btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      drawCrayonRect(btn.querySelector('.rough-svg'), {pad:4, animate:true});
+      drawCrayonRect(document.getElementById('cardBorder'), {animate:true});
+    });
+  });
+  document.getElementById('langSwitch').addEventListener('click', e=>{
+    const b = e.target.closest('button[data-lang]'); if(b) applyLang(b.dataset.lang);
+  });
+
+  /* 双模式：表盘 + 指针入场 + 交互绑定 */
+  drawDialArc();
+  document.getElementById('needle').style.transform = 'translateX(-50%) rotate(0deg)'; // 先指中间
+  requestAnimationFrame(()=> setTimeout(()=> applyMode(currentMode, true), 60));        // 再转向记忆模式
+  document.getElementById('modeLabels').addEventListener('click', e=>{
+    const b = e.target.closest('.mode-btn'); if(b) applyMode(b.dataset.mode);
+  });
+  document.getElementById('swapBtn').addEventListener('click', ()=>{ q4Alt = !q4Alt; renderQ4(); });
+  document.querySelectorAll('#snapPanel .choice').forEach(c=>{
+    c.addEventListener('click', ()=>{
+      c.parentElement.querySelectorAll('.choice').forEach(x=> x.classList.remove('sel'));
+      c.classList.add('sel');
+    });
+  });
+
+  /* 演出信息表单 + 情绪选择（PRD 5.1） */
+  buildEmoPicker();
+  prefillForm();
+  document.getElementById('searchBtn').addEventListener('click', ()=> prefillForm());
+
+  /* 海报生成与展示（PRD 5.3） */
+  document.getElementById('generateBtn').addEventListener('click', generatePoster);
+  document.getElementById('saveBtn').addEventListener('click', savePosterEntry);
+  document.getElementById('posterImgBtn').addEventListener('click', savePosterImage);
+  document.getElementById('posterSaveBtn').addEventListener('click', savePosterEntry);
+  document.getElementById('posterCloseBtn').addEventListener('click', closePoster);
+  document.getElementById('keepBtn').addEventListener('click', ()=> document.getElementById('noteBubble').style.display='none');
+  document.getElementById('noteBtn').addEventListener('click', makeNote);
+
+  /* 关键3：窗口/设备尺寸变化（含旋转）时，宽度改变会让 ResizeObserver 未覆盖的
+     按钮行与下划线也需重绘 */
+  let t;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(t);
+    t=setTimeout(()=>{ redrawStaticBorders(false); redrawPosterIfOpen(); }, 200);
+  });
+}
+window.addEventListener('load', ()=> setTimeout(init, 200));
+</script>
+</body>
+</html>
