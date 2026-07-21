@@ -1,8 +1,8 @@
 // Memento AI · Vercel Node 云函数共享库
 // 作用：藏 Key（TAVILY_API_KEY / GEMINI_API_KEY 仅存服务端环境变量）、CORS、调用封装
 const TAVILY_KEY = process.env.TAVILY_API_KEY;
-const GEMINI_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const GROQ_KEY = process.env.GROQ_API_KEY;
+const GROQ_MODEL = 'llama-3.3-70b-versatile';  // 免费层；要更快可换 llama-3.1-8b-instant
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -39,24 +39,28 @@ async function callTavily(query) {
   return (j.results || []).map((x) => (x.title || '') + '\n' + (x.content || '')).join('\n\n');
 }
 
-// 通用：Gemini 2.5 Flash，要求 JSON 输出
-async function callGemini(system, prompt) {
-  if (!GEMINI_KEY) throw new Error('NO_GEMINI_KEY');
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+// 通用：Groq 免费 LLM（Llama 3.3 70B），强制 JSON 输出
+async function callLLM(system, prompt) {
+  if (!GROQ_KEY) throw new Error('NO_GROQ_KEY');
+  const url = 'https://api.groq.com/openai/v1/chat/completions';
   const body = {
-    systemInstruction: { parts: [{ text: system }] },
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { responseMimeType: 'application/json' },
+    model: GROQ_MODEL,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: prompt },
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.7,
   };
   const r = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + GROQ_KEY },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error('GEMINI_ERR ' + r.status);
+  if (!r.ok) throw new Error('GROQ_ERR ' + r.status);
   const j = await r.json();
-  const txt = j.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const txt = j.choices?.[0]?.message?.content || '{}';
   try { return JSON.parse(txt); } catch { return { raw: txt }; }
 }
 
-module.exports = { CORS, send, readBody, callTavily, callGemini };
+module.exports = { CORS, send, readBody, callTavily, callLLM };
