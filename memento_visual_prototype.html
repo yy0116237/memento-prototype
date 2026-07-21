@@ -997,7 +997,7 @@ overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModal(); });
 
 /* ---------- MementoAI 适配层（3 个 AI 触点统一入口） ----------
    架构：前端只调用 MementoAI.*，内部按 USE_MOCK 决定走 Mock 还是云函数。
-   接真 AI（触点1 Tavily 搜索 / 触点2 Gemini 2.5 Flash 润色+情绪 / 触点3 海报金句）：
+   接真 AI（触点1 Tavily 搜索 / 触点2 Groq(Llama 3.3) 润色+情绪 / 触点3 海报金句，三触点共用 Groq 免费 LLM）：
      已选定平台 = Vercel（Node 运行时），云函数代码在本仓库 api/（search.js / polish.js / poster.js + _lib.js）。
      1) 在 Vercel 部署本仓库，得公网地址（如 https://memento-ai.vercel.app）；
      2) 在 Vercel 配置环境变量 TAVILY_API_KEY、GEMINI_API_KEY（Key 只在服务端）；
