@@ -128,6 +128,10 @@ memento-prototype/
 └── package.json
 ```
 
-## 许可证
+##  页面预览图
+<img width="383" height="817" alt="预览" src="https://github.com/user-attachments/assets/3f013866-7660-4b57-8632-93e51c0ced46" />
+snap:
+<img width="369" height="659" alt="预览2" src="https://github.com/user-attachments/assets/0fb9ab2c-e504-430e-bf57-701727e64c1a" />
+murmur:
+<img width="369" height="659" alt="预览2" src="https://github.com/user-attachments/assets/efbf4961-01ad-46c6-a4f7-0a18af8d1e92" />
 
-MIT
