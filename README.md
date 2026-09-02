@@ -135,4 +135,6 @@ snap:
 murmur:
 <img width="564" height="813" alt="3" src="https://github.com/user-attachments/assets/1f7d1a1e-0c76-45d9-b17f-e126956dda22" />
 
+导出海报预览<img width="741" height="723" alt="导出海报demo" src="https://github.com/user-attachments/assets/7890cba1-8be8-43a9-bd82-5ce1961277a7" />
+
 
